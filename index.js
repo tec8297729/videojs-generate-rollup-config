@@ -12,12 +12,13 @@ const externalGlobals = require('rollup-plugin-external-globals');
 const typescript = require('rollup-plugin-typescript2');
 const postcss = require('rollup-plugin-postcss');
 const progress = require('postcss-progress');
+const cleanup = require('rollup-plugin-cleanup');
 const path = require('path');
 
 const babelConfig = require('@videojs/babel-config/es.js');
 
 /**
- * 获取用户目录
+ * 获取项目目录
  */
 const getUserPath = function (...pathStr) {
   const uPath = path.join(process.cwd(), ...pathStr);
@@ -104,6 +105,7 @@ const ORDERED_DEFAULTS = {
       'babel',
       'typescript',
       'postcss',
+      'cleanup',
     ],
     module: [
       'jsonResolve',
@@ -159,7 +161,15 @@ const ORDERED_DEFAULTS = {
       mainFields: ['browser', 'module', 'jsnext:main', 'main'],
       dedupe: (id) => settings.externals.module.some((ext) => id.startsWith(ext))
     }),
-    uglify: terser({output: {comments: 'some'}}),
+    uglify: terser({
+      output: {
+        // comments: 'some'
+        comments: function (node, comment) {
+          var text = comment.value;
+          return /@preserve|@license|@cc_on/i.test(text);
+        },
+      }
+    }),
     istanbul: istanbul({exclude: settings.excludeCoverage}),
     typescript: typescript({
       tsconfig: getUserPath("tsconfig.json"),
@@ -193,7 +203,8 @@ const ORDERED_DEFAULTS = {
 
         progress.stop()
       ]
-    })
+    }),
+    cleanup: cleanup(),
   })
 };
 
