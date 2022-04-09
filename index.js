@@ -9,10 +9,18 @@ const resolve = require('@rollup/plugin-node-resolve').default;
 const {terser} = require('rollup-plugin-terser');
 const istanbul = require('rollup-plugin-istanbul');
 const externalGlobals = require('rollup-plugin-external-globals');
+const typescript = require('rollup-plugin-typescript2');
 const path = require('path');
 
 const babelConfig = require('@videojs/babel-config/es.js');
 
+/**
+ * 获取用户目录
+ */
+const getUserPath = function (...pathStr) {
+  const uPath = path.join(process.cwd(), ...pathStr);
+  return uPath
+}
 /**
  * Get the package.json from the cwd and
  * validate that it has all the correct entries.
@@ -56,7 +64,7 @@ const validatePlugins = ({plugins, primedPlugins}) =>
     }
   }));
 const MINJS_REGEX = /^.+\.min\.js$/;
-
+console.log('getUserPath', getUserPath("tsconfig.json"));
 // all complex defaults
 // Note: the order here matters because one default often
 // determines the value of another default
@@ -91,12 +99,14 @@ const ORDERED_DEFAULTS = {
       'json',
       'commonjs',
       'externalGlobals',
-      'babel'
+      'babel',
+      'typescript'
     ],
     module: [
       'jsonResolve',
       'json',
-      'babel'
+      'babel',
+      'typescript'
     ],
     test: [
       'multiEntry',
@@ -146,7 +156,10 @@ const ORDERED_DEFAULTS = {
       dedupe: (id) => settings.externals.module.some((ext) => id.startsWith(ext))
     }),
     uglify: terser({output: {comments: 'some'}}),
-    istanbul: istanbul({exclude: settings.excludeCoverage})
+    istanbul: istanbul({exclude: settings.excludeCoverage}),
+    typescript: typescript({
+      tsconfig: getUserPath("tsconfig.json"),
+    }),
   })
 };
 
@@ -170,7 +183,7 @@ const getSettings = function(options) {
   // package name minus scope
   const basicName = pkg.name.split('/').reverse()[0];
   const settings = Object.assign({
-    input: 'src/plugin.js',
+    input: 'src/plugin.ts',
     testInput: 'test/**/*.test.js',
     distName: basicName,
     exportName: basicName.replace(/-(\w)/g, (matches, letter) => letter.toUpperCase()),
