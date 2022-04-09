@@ -10,6 +10,8 @@ const {terser} = require('rollup-plugin-terser');
 const istanbul = require('rollup-plugin-istanbul');
 const externalGlobals = require('rollup-plugin-external-globals');
 const typescript = require('rollup-plugin-typescript2');
+const postcss = require('rollup-plugin-postcss');
+const progress = require('postcss-progress');
 const path = require('path');
 
 const babelConfig = require('@videojs/babel-config/es.js');
@@ -64,7 +66,7 @@ const validatePlugins = ({plugins, primedPlugins}) =>
     }
   }));
 const MINJS_REGEX = /^.+\.min\.js$/;
-console.log('getUserPath', getUserPath("tsconfig.json"));
+
 // all complex defaults
 // Note: the order here matters because one default often
 // determines the value of another default
@@ -100,13 +102,15 @@ const ORDERED_DEFAULTS = {
       'commonjs',
       'externalGlobals',
       'babel',
-      'typescript'
+      'typescript',
+      'postcss',
     ],
     module: [
       'jsonResolve',
       'json',
       'babel',
-      'typescript'
+      'typescript',
+      'postcss',
     ],
     test: [
       'multiEntry',
@@ -160,6 +164,36 @@ const ORDERED_DEFAULTS = {
     typescript: typescript({
       tsconfig: getUserPath("tsconfig.json"),
     }),
+    postcss: postcss({
+      plugins: [
+        // set the startTime so that we can print the end time
+        progress.start(),
+
+        // inlines local file imports
+        require('postcss-import')(),
+
+        // allow nested rules
+        require('postcss-nesting')(),
+
+        // allow custom properties, aka variables
+        require('postcss-custom-properties')({preserve: false}),
+
+        // allow calculations to be static values
+        // included after vars are inlined
+        require('postcss-calc')(),
+
+        // adds a banner to the top of the file
+        require('postcss-banner')({important: true, inline: true }),
+
+        // add/remove vendor prefixes based on browser list
+        require('autoprefixer')(settings.browserslist),
+
+        // minify
+        require('postcss-csso')(),
+
+        progress.stop()
+      ]
+    })
   })
 };
 
